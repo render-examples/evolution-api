@@ -67,7 +67,7 @@ Default region: **Oregon**. Nothing to fill in on deploy.
 
 Evolution API stores each session's `creds` in Postgres and the Baileys signal keys in Redis or on the local filesystem. This Blueprint turns Redis off and mounts a disk where those keys are written. That saves a Key Value instance, and a service with a disk stops the old container before it starts the new one. WhatsApp allows one live socket per session, so overlapping containers during a zero-downtime deploy would fight over the connection.
 
-The trade-off is a short outage on every deploy. Render stops the old container before the new one starts, so the API is unavailable for about a minute and a half while the new container runs migrations and reconnects. Connected numbers come back on their own; no new QR code or pairing code is needed. Messages sent to the number during the gap are delivered once it reconnects.
+The trade-off is a short outage on every deploy. Render stops the old container before the new one starts, so the API is unavailable for about a minute and a half while the new container runs migrations and reconnects. Connected numbers come back on their own; no new QR code or pairing code is needed.
 
 To scale out later, add a paid [Key Value](https://render.com/docs/key-value) instance with `maxmemoryPolicy: noeviction`, set `CACHE_REDIS_ENABLED=true` and `CACHE_REDIS_URI`, and reconnect your numbers.
 
