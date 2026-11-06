@@ -28,7 +28,9 @@ projects:
             numInstances: 1
             healthCheckPath: /
             disk:
-              # Baileys signal keys live here when Redis is off. Creds are in Postgres.
+              # Default mode: Baileys signal keys live here. Creds are in Postgres.
+              # Key Value mode: keys move to Redis, but keep this disk. Without
+              # it, deploys overlap and two containers share one session.
               name: evolution-instances
               mountPath: /evolution/instances
               sizeGB: 1
@@ -55,11 +57,23 @@ projects:
                   property: connectionString
               - key: DATABASE_CONNECTION_CLIENT_NAME
                 value: evolution_render
-              # No Key Value instance. Signal keys go to the disk above.
+              # Session key storage. Default: disk, no Key Value.
+              # To use Key Value instead, before the first deploy:
+              #   1. Set CACHE_REDIS_ENABLED to "true" and CACHE_LOCAL_ENABLED to "false".
+              #   2. Uncomment CACHE_REDIS_URI below and the evolution-kv service at the end.
+              # Switching an existing deploy means re-pairing every number.
               - key: CACHE_REDIS_ENABLED
                 value: "false"
               - key: CACHE_LOCAL_ENABLED
                 value: "true"
+              # Creds stay in Postgres in both modes.
+              - key: CACHE_REDIS_SAVE_INSTANCES
+                value: "false"
+              # - key: CACHE_REDIS_URI
+              #   fromService:
+              #     name: evolution-kv
+              #     type: keyvalue
+              #     property: connectionString
               - key: TELEMETRY_ENABLED
                 value: "false"
               - key: LOG_LEVEL
@@ -70,6 +84,16 @@ projects:
                 value: UTC
               - key: LANGUAGE
                 value: en
+
+          # Optional Key Value for session keys and cache. Paid plan only: the
+          # free plan has no persistence, and a restart would log out every number.
+          # noeviction keeps Redis from dropping session keys under memory pressure.
+          # - type: keyvalue
+          #   name: evolution-kv
+          #   plan: starter
+          #   region: oregon
+          #   maxmemoryPolicy: noeviction
+          #   ipAllowList: []
 
         databases:
           - name: evolution-db

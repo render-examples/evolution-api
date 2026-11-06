@@ -69,7 +69,30 @@ Evolution API stores each session's `creds` in Postgres and the Baileys signal k
 
 The trade-off is a short outage on every deploy. Render stops the old container before the new one starts, so the API is unavailable for about a minute and a half while the new container runs migrations and reconnects. Connected numbers come back on their own; no new QR code or pairing code is needed.
 
-To scale out later, add a paid [Key Value](https://render.com/docs/key-value) instance with `maxmemoryPolicy: noeviction`, set `CACHE_REDIS_ENABLED=true` and `CACHE_REDIS_URI`, and reconnect your numbers.
+### Optional: Key Value for session keys
+
+[`render.yaml`](./render.yaml) ships a commented-out [Key Value](https://render.com/docs/key-value) instance. With it on, the signal keys and Evolution's cache live in Redis instead of on the disk. `creds` stay in Postgres in both modes.
+
+| | Default (disk) | Key Value |
+| --- | --- | --- |
+| Signal keys | `/evolution/instances` on the disk | `evolution-kv` |
+| Cache | In-process, lost on restart | Redis, survives restarts |
+| Extra cost | $0 | ~$10 (Starter) |
+| Deploys | Stop-then-start | Stop-then-start (the disk stays) |
+
+To turn it on, edit `render.yaml` before your first deploy:
+
+1. Set `CACHE_REDIS_ENABLED` to `"true"` and `CACHE_LOCAL_ENABLED` to `"false"`.
+2. Uncomment `CACHE_REDIS_URI` and the `evolution-kv` service.
+3. Push, then deploy the Blueprint.
+
+Keep these as they are:
+
+- **The disk.** It no longer holds keys, but it keeps deploys stop-then-start. Without it, Render overlaps the old and new containers. Both connect with the same session, kick each other offline, and write the same keys to Redis at once.
+- **A paid plan with `noeviction`.** The free plan has no persistence, and eviction deletes keys under memory pressure. Either one logs your numbers out.
+- **`numInstances: 1`.** Key Value does not make horizontal scaling safe.
+
+Switching an existing deploy from disk to Key Value moves the keys, so every connected number must pair again.
 
 ## Quick Start
 
@@ -145,6 +168,7 @@ Prices from [Render's pricing page](https://render.com/pricing).
 | `evolution-db` (Basic 256 MB) | $6 |
 | 1 GB disk | $0.25 |
 | **Total** | **~$13.25** |
+| Optional `evolution-kv` (Key Value Starter) | +$10 |
 
 Starter fits a handful of numbers. Move to Standard if you connect many instances or turn on media storage and history sync.
 
