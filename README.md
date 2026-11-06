@@ -2,7 +2,7 @@
 
 # Evolution API on Render
 
-A self-hosted WhatsApp API with a web manager, webhooks, and chatbot integrations. This repo is the Blueprint. The app is built from [EvolutionAPI/evolution-api](https://github.com/EvolutionAPI/evolution-api) `main`.
+A self-hosted WhatsApp API with a web manager, webhooks, and chatbot integrations. This repo is the Blueprint. The app is built from [evolution-foundation/evolution-api](https://github.com/evolution-foundation/evolution-api) `main`.
 
 <p>
   <a href="https://render.com/deploy-template/api/github/start?template_repo=evolution-api">
@@ -14,10 +14,10 @@ A self-hosted WhatsApp API with a web manager, webhooks, and chatbot integration
   <a href="https://render.com">
     <img src="https://img.shields.io/badge/Render-Docker%20%2B%20Postgres-46e3b7?logo=render&logoColor=white" alt="Render" />
   </a>
-  <a href="https://github.com/EvolutionAPI/evolution-api">
+  <a href="https://github.com/evolution-foundation/evolution-api">
     <img src="https://img.shields.io/badge/Upstream-Evolution%20API-111111?logo=github&logoColor=white" alt="Upstream" />
   </a>
-  <a href="https://github.com/EvolutionAPI/evolution-api/blob/main/LICENSE">
+  <a href="https://github.com/evolution-foundation/evolution-api/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0%20%2B%20conditions-blue" alt="Evolution API License" />
   </a>
 </p>
@@ -26,11 +26,11 @@ A self-hosted WhatsApp API with a web manager, webhooks, and chatbot integration
 
 ## What This Template Shows
 
-This repository does not contain the Evolution API source. The service sets `repo: https://github.com/EvolutionAPI/evolution-api` and `branch: main`, so Render clones upstream and builds its `Dockerfile`. A push to that branch redeploys the service. Plan, disk, and environment changes are commits in this wrapper.
+This repository does not contain the Evolution API source. The service sets `repo: https://github.com/evolution-foundation/evolution-api` and `branch: main`, so Render clones upstream and builds its `Dockerfile`. A push to that branch redeploys the service. Plan, disk, and environment changes are commits in this wrapper.
 
 | Piece | Role |
 | --- | --- |
-| **[Evolution API](https://github.com/EvolutionAPI/evolution-api)** | WhatsApp API (Baileys and the official Cloud API), REST endpoints, webhooks, and the Evolution Manager UI at `/manager`. |
+| **[Evolution API](https://github.com/evolution-foundation/evolution-api)** | WhatsApp API (Baileys and the official Cloud API), REST endpoints, webhooks, and the Evolution Manager UI at `/manager`. |
 | **[Render Web Service](https://render.com/docs/web-services)** | `evolution-api`, Docker runtime. Runs Prisma migrations on boot, then serves on 8080. |
 | **[Render Postgres](https://render.com/docs/postgresql)** | `evolution-db`. Instances, session credentials, messages, contacts, and chats. |
 | **[Persistent disk](https://render.com/docs/disks)** | `/evolution/instances`. Baileys signal keys for each connected number. |
@@ -45,14 +45,14 @@ flowchart LR
   api --> db[("evolution-db")]
   api --> disk[("evolution-instances")]
   api -->|webhooks| client
-  upstream["EvolutionAPI/evolution-api main"] --> api
+  upstream["evolution-foundation/evolution-api main"] --> api
 ```
 
 ### How It Works
 
 1. Click **Deploy to Render**. The flow forks this wrapper into your GitHub account and applies [`render.yaml`](./render.yaml).
 2. Render creates `evolution-db`, generates `AUTHENTICATION_API_KEY`, and wires the database URL and public URL into the service.
-3. Render clones `EvolutionAPI/evolution-api` at `main` and builds its `Dockerfile`. On start, the container runs `prisma migrate deploy`, then the server.
+3. Render clones `evolution-foundation/evolution-api` at `main` and builds its `Dockerfile`. On start, the container runs `prisma migrate deploy`, then the server.
 4. Open `https://<evolution-api>.onrender.com/manager`, sign in with `AUTHENTICATION_API_KEY`, create an instance, and scan the QR code with WhatsApp.
 5. Later commits on upstream `main` redeploy the service. Editing this wrapper changes the Blueprint, not the app source.
 
@@ -114,7 +114,7 @@ curl -X POST "https://<evolution-api>.onrender.com/message/sendText/main" \
 | **Manager UI** | Create instances, scan QR codes, and configure integrations at `/manager`. |
 | **Webhooks** | Per-instance or global webhooks for messages, status, and connection events. |
 | **Integrations** | Typebot, Chatwoot, OpenAI, Dify, n8n, Flowise, and EvoAI. |
-| **Upstream builds** | The service tracks `EvolutionAPI/evolution-api` `main` without copying that repo here. |
+| **Upstream builds** | The service tracks `evolution-foundation/evolution-api` `main` without copying that repo here. |
 
 ## Configuration
 
@@ -129,7 +129,7 @@ curl -X POST "https://<evolution-api>.onrender.com/message/sendText/main" \
 | `CACHE_LOCAL_ENABLED` | Blueprint | `true`. In-process cache. |
 | `TELEMETRY_ENABLED` | Blueprint | `false`. |
 | `TZ` | Blueprint | `UTC`. The upstream image defaults to `America/Sao_Paulo`. |
-| `WEBHOOK_GLOBAL_*`, `OPENAI_ENABLED`, `TYPEBOT_ENABLED`, `CHATWOOT_ENABLED`, `S3_*` | Optional | See [`.env.example`](./.env.example) and the upstream [`.env.example`](https://github.com/EvolutionAPI/evolution-api/blob/main/.env.example). |
+| `WEBHOOK_GLOBAL_*`, `OPENAI_ENABLED`, `TYPEBOT_ENABLED`, `CHATWOOT_ENABLED`, `S3_*` | Optional | See [`.env.example`](./.env.example) and the upstream [`.env.example`](https://github.com/evolution-foundation/evolution-api/blob/main/.env.example). |
 
 `generateValue` runs once, on the first Blueprint apply. Any variable you do not set falls back to the upstream `.env.example`, which the image copies to `.env`.
 
@@ -150,18 +150,17 @@ Starter fits a handful of numbers. Move to Standard if you connect many instance
 
 | Problem | Solution |
 | --- | --- |
-| Deploy fails at `Migration failed` | Confirm `evolution-db` is **Available** and `DATABASE_CONNECTION_URI` is set, then redeploy. |
+| Deploy fails with `P1001: Can't reach database server` | The first deploy can start before `evolution-db` is **Available**. Wait for the database, then **Manual Deploy**. |
 | Manager rejects the key | Use `AUTHENTICATION_API_KEY` from the service's **Environment** page, not the upstream example key. |
 | QR code expires before you scan it | Request a new one with `GET /instance/connect/<name>`. `QRCODE_LIMIT` controls how many it generates. |
 | Number disconnects after every deploy | Check that the disk is mounted at `/evolution/instances` and `numInstances` is `1`. |
 | Webhook payloads link to `localhost` | `SERVER_URL` must be the public URL. Redeploy after adding a custom domain and update it. |
-| Database URL appears in deploy logs | Upstream `deploy_database.sh` echoes it on boot. Logs are visible to anyone with workspace access. |
 | OOM restarts | Move `evolution-api` to Standard. |
 
 ## Project Structure
 
 ```
-render.yaml       Blueprint. The service repo points at EvolutionAPI/evolution-api.
+render.yaml       Blueprint. The service repo points at evolution-foundation/evolution-api.
 README.md         This file
 LICENSE           Wrapper license
 .env.example      Optional integrations to add after deploy
@@ -177,13 +176,13 @@ LICENSE           Wrapper license
 
 **Upstream:**
 
-- [Evolution API](https://github.com/EvolutionAPI/evolution-api)
+- [Evolution API](https://github.com/evolution-foundation/evolution-api)
 - [Evolution API docs](https://doc.evolution-api.com)
 
 ## License
 
 [MIT](LICENSE) for this wrapper.
 
-Upstream Evolution API uses the Apache License 2.0 with extra conditions: keep the logo and copyright in the Evolution API console, and show a notice that Evolution API is in use in any product built on it. Read the [upstream LICENSE](https://github.com/EvolutionAPI/evolution-api/blob/main/LICENSE) before using it commercially.
+Upstream Evolution API uses the Apache License 2.0 with extra conditions: keep the logo and copyright in the Evolution API console, and show a notice that Evolution API is in use in any product built on it. Read the [upstream LICENSE](https://github.com/evolution-foundation/evolution-api/blob/main/LICENSE) before using it commercially.
 
 WhatsApp Baileys connections are unofficial. Meta can restrict numbers that break its terms. Use the WhatsApp Cloud API integration for production messaging at scale.

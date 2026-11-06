@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=https://render.com/schema/render.yaml.json
 #
 # Evolution API wrapper. This repo does not contain the app.
-# The service builds from EvolutionAPI/evolution-api main, so an upstream
+# The service builds from evolution-foundation/evolution-api main, so an upstream
 # push redeploys it. Blueprint changes live here.
-# Upstream: https://github.com/EvolutionAPI/evolution-api
+# Upstream: https://github.com/evolution-foundation/evolution-api
 
 previews:
   generation: off
@@ -16,7 +16,7 @@ projects:
           - type: web
             name: evolution-api
             runtime: docker
-            repo: https://github.com/EvolutionAPI/evolution-api
+            repo: https://github.com/evolution-foundation/evolution-api
             branch: main
             dockerfilePath: ./Dockerfile
             dockerContext: .
