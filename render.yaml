@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+#
+# Evolution API wrapper. This repo does not contain the app.
+# The service builds from EvolutionAPI/evolution-api main, so an upstream
+# push redeploys it. Blueprint changes live here.
+# Upstream: https://github.com/EvolutionAPI/evolution-api
+
+previews:
+  generation: off
+
+projects:
+  - name: evolution-api
+    environments:
+      - name: production
+        services:
+          - type: web
+            name: evolution-api
+            runtime: docker
+            repo: https://github.com/EvolutionAPI/evolution-api
+            branch: main
+            dockerfilePath: ./Dockerfile
+            dockerContext: .
+            plan: starter
+            region: oregon
+            # One WhatsApp session can only have one live socket. Keep a single
+            # instance; the disk also makes deploys stop-then-start, so the old
+            # and new containers never connect to WhatsApp at the same time.
+            numInstances: 1
+            healthCheckPath: /
+            disk:
+              # Baileys signal keys live here when Redis is off. Creds are in Postgres.
+              name: evolution-instances
+              mountPath: /evolution/instances
+              sizeGB: 1
+            envVars:
+              # The app reads SERVER_PORT. PORT tells Render where to route.
+              - key: PORT
+                value: "8080"
+              - key: SERVER_PORT
+                value: "8080"
+              - key: SERVER_TYPE
+                value: http
+              - key: SERVER_URL
+                fromService:
+                  name: evolution-api
+                  type: web
+                  envVarKey: RENDER_EXTERNAL_URL
+              - key: AUTHENTICATION_API_KEY
+                generateValue: true
+              - key: DATABASE_PROVIDER
+                value: postgresql
+              - key: DATABASE_CONNECTION_URI
+                fromDatabase:
+                  name: evolution-db
+                  property: connectionString
+              - key: DATABASE_CONNECTION_CLIENT_NAME
+                value: evolution_render
+              # No Key Value instance. Signal keys go to the disk above.
+              - key: CACHE_REDIS_ENABLED
+                value: "false"
+              - key: CACHE_LOCAL_ENABLED
+                value: "true"
+              - key: TELEMETRY_ENABLED
+                value: "false"
+              - key: LOG_LEVEL
+                value: ERROR,WARN,INFO,LOG
+              - key: DEL_INSTANCE
+                value: "false"
+              - key: TZ
+                value: UTC
+              - key: LANGUAGE
+                value: en
+
+        databases:
+          - name: evolution-db
+            databaseName: evolution
+            user: evolution
+            plan: basic-256mb
+            region: oregon
+            postgresMajorVersion: "16"
+            # Internal connections only.
+            ipAllowList: []
