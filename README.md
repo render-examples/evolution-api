@@ -67,6 +67,8 @@ Default region: **Oregon**. Nothing to fill in on deploy.
 
 Evolution API stores each session's `creds` in Postgres and the Baileys signal keys in Redis or on the local filesystem. This Blueprint turns Redis off and mounts a disk where those keys are written. That saves a Key Value instance, and a service with a disk stops the old container before it starts the new one. WhatsApp allows one live socket per session, so overlapping containers during a zero-downtime deploy would fight over the connection.
 
+The trade-off is a short outage on every deploy. Render stops the old container before the new one starts, so the API is unavailable for about a minute and a half while the new container runs migrations and reconnects. Connected numbers come back on their own; no new QR code or pairing code is needed. Messages sent to the number during the gap are delivered once it reconnects.
+
 To scale out later, add a paid [Key Value](https://render.com/docs/key-value) instance with `maxmemoryPolicy: noeviction`, set `CACHE_REDIS_ENABLED=true` and `CACHE_REDIS_URI`, and reconnect your numbers.
 
 ## Quick Start
@@ -153,9 +155,11 @@ Starter fits a handful of numbers. Move to Standard if you connect many instance
 | Deploy fails with `P1001: Can't reach database server` | The first deploy can start before `evolution-db` is **Available**. Wait for the database, then **Manual Deploy**. |
 | Manager rejects the key | Use `AUTHENTICATION_API_KEY` from the service's **Environment** page, not the upstream example key. |
 | QR code expires before you scan it | Request a new one with `GET /instance/connect/<name>`. `QRCODE_LIMIT` controls how many it generates. |
+| Scanning the QR code does not link the phone | Common with new or VoIP numbers. Recreate the instance with the **Number** field set (digits with country code, no `+`), then on the phone use **Linked devices > Link a device > Link with phone number instead** and enter the 8-digit code. |
 | Number disconnects after every deploy | Check that the disk is mounted at `/evolution/instances` and `numInstances` is `1`. |
 | Webhook payloads link to `localhost` | `SERVER_URL` must be the public URL. Redeploy after adding a custom domain and update it. |
 | OOM restarts | Move `evolution-api` to Standard. |
+| Logo in the top-left of the manager is broken | Known upstream issue. The manager loads `https://evolution-api.com/files/evo/evolution-logo-white.svg`, which now returns 404. Cosmetic only. |
 
 ## Project Structure
 
